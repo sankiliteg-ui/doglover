@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Annu's Adventure - Bug Fixed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky-color: linear-gradient(to bottom, #2b5876, #4e4376);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            background: var(--sky-color);
+            overflow: hidden;
+            border: 4px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) { .game-container { height: 350px; } }
+
+        /* --- BACKGROUND --- */
+        .moon {
+            position: absolute;
+            top: 40px;
+            right: 60px;
+            width: 60px;
+            height: 60px;
+            background: #fdfd96;
+            border-radius: 50%;
+            box-shadow: 0 0 40px #fdfd96;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background: #333;
+            border-top: 5px solid #ff69b4;
+            z-index: 1;
+        }
+
+        /* --- ANNU --- */
+        #annu {
+            position: absolute;
+            bottom: 100px; 
+            left: 30px;
+            width: 70px;
+            height: 70px;
+            /* 👉 PHOTO HERE */
+            background-image: url('ann.jpg'); 
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .animate-jump {
+            animation: jump 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes jump {
+            0% { bottom: 100px; }
+            40% { bottom: 380px; } /* High Jump */
+            60% { bottom: 380px; } 
+            100% { bottom: 100px; }
+        }
+
+        /* --- DOG --- */
+        #dog-container {
+            position: absolute;
+            bottom: 100px;
+            right: -200px; /* Start further outside */
+            width: 150px;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            z-index: 9;
+            /* Animation handled by class toggle in JS */
+        }
+
+        #dog-emoji {
+            font-size: 50px;
+            line-height: 50px;
+            margin-top: 5px;
+        }
+
+        .love-msg {
+            font-family: 'Fredoka One', cursive, sans-serif; 
+            font-size: 14px;
+            color: #000;
+            background-color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 3px solid #ff1493;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .love-msg::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0;
+            border-style: solid;
+            border-color: #ff1493 transparent transparent transparent;
+        }
+
+        /* Keyframe for Dog Movement */
+        @keyframes moveDog {
+            from { right: -200px; }
+            to { right: 120%; } /* Move completely off left screen */
+        }
+
+        .dog-run-anim {
+            animation-name: moveDog;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+
+        /* --- UI --- */
+        #score-board {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            z-index: 20;
+            text-shadow: 2px 2px 0 #000;
+        }
+        
+        #speed-level {
+            font-size: 12px;
+            color: #ff69b4;
+            display: block;
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            color: white;
+        }
+
+        button {
+            background: #ff1493;
+            color: white;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #b00b69;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container" id="gameArea">
+        <div class="moon"></div>
+        <div id="score-board">
+            Score: <span id="scoreVal">0</span>
+            <span id="speed-level">Speed: Normal</span>
+        </div>
+        <div id="annu"></div>
+        <div id="dog-container">
+            <div class="love-msg" id="msg-text">ANNU DARLING ❤️</div>
+            <div id="dog-emoji">🐕</div>
+        </div>
+        <div class="ground"></div>
+        <div id="game-over-screen">
+            <h1 style="color: #ff69b4; font-family: 'Fredoka One';">Caught You!</h1>
+            <p style="margin-top:10px; font-size: 18px;">Final Score: <span id="finalScore">0</span></p>
+            <button onclick="startGame()">Tap to Play 🔄</button>
+        </div>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="jumpSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-quick-jump-arcade-game-239.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="failSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-cartoon-failure-piano-2519.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const annu = document.getElementById("annu");
+        const dogContainer = document.getElementById("dog-container");
+        const msgText = document.getElementById("msg-text");
+        const gameOverScreen = document.getElementById("game-over-screen");
+        const scoreText = document.getElementById("scoreVal");
+        const finalScoreText = document.getElementById("finalScore");
+        const speedText = document.getElementById("speed-level");
+
+        const bgMusic = document.getElementById("bgMusic");
+        const jumpSound = document.getElementById("jumpSound");
+        const failSound = document.getElementById("failSound");
+
+        let score = 0;
+        let isGameRunning = false;
+        let gameLoop;
+        let currentDuration = 3.0; // Seconds
+        let targetDuration = 3.0;  // For safe updates
+        
+        const compliments = [
+            "ANNU DARLING ❤️", "ANNU CUTIE 😘", "ANNU ANGEL 😇", 
+            "MY QUEEN 👑", "WAIT LOVE! 💖", "STOP ANNU! 🌹"
+        ];
+
+        // 1. SAFE UPDATE: Only change speed/text when animation loops (Round Complete)
+        dogContainer.addEventListener('animationiteration', () => {
+            // Apply new speed safely at start of new round
+            if (currentDuration !== targetDuration) {
+                currentDuration = targetDuration;
+                dogContainer.style.animationDuration = currentDuration + "s";
+                
+                // Update Text Label
+                if(currentDuration < 2.5) speedText.innerText = "Speed: Fast";
+                if(currentDuration < 1.5) { speedText.innerText = "Speed: SUPER FAST! 🔥"; speedText.style.color = "red"; }
+            }
+
+            // Change Text
+            let randomWord = compliments[Math.floor(Math.random() * compliments.length)];
+            msgText.innerText = randomWord;
+        });
+
+        function startGame() {
+            gameOverScreen.style.display = 'none';
+            isGameRunning = true;
+            score = 0;
+            scoreText.innerText = 0;
+            
+            // Reset Speed
+            currentDuration = 3.0;
+            targetDuration = 3.0;
+            dogContainer.style.animationDuration = "3s";
+            
+            // Reset Position logic
+            dogContainer.classList.remove("dog-run-anim");
+            void dogContainer.offsetWidth; // Trigger reflow to restart animation
+            dogContainer.classList.add("dog-run-anim");
+
+            speedText.innerText = "Speed: Normal";
+            speedText.style.color = "#ff69b4";
+            
+            bgMusic.volume = 0.3;
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(()=>{});
+
+            gameLoop = setInterval(gameLogic, 10);
+        }
+
+        function jump() {
+            if (!isGameRunning) {
+                if(gameOverScreen.style.display !== 'flex') startGame();
+                return;
+            }
+            if (!annu.classList.contains("animate-jump")) {
+                jumpSound.currentTime = 0;
+                jumpSound.play().catch(()=>{});
+                annu.classList.add("animate-jump");
+                setTimeout(() => annu.classList.remove("animate-jump"), 900);
+            }
+        }
+
+        function gameLogic() {
+            if (!isGameRunning) return;
+
+            score++;
+            scoreText.innerText = Math.floor(score / 10);
+            
+            // Queue Speed Increase (Don't apply immediately)
+            if (score % 500 === 0 && targetDuration > 1.2) { 
+                targetDuration -= 0.2; 
+                // Speed will be applied in 'animationiteration' event above
+            }
+
+            // --- IMPROVED COLLISION DETECTION ---
+            let annuRect = annu.getBoundingClientRect();
+            // Specifically target the emoji, not the text bubble
+            let dogEmoji = document.getElementById("dog-emoji").getBoundingClientRect();
+
+            // Hitbox Tweak: Reduced size (-20px) to be more forgiving
+            // This prevents "Automatic Touch" if the dog is just slightly overlapping
+            if (
+                annuRect.right > dogEmoji.left + 25 && 
+                annuRect.left < dogEmoji.right - 25 &&
+                annuRect.bottom > dogEmoji.top + 25
+            ) {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            clearInterval(gameLoop);
+            dogContainer.classList.remove("dog-run-anim"); // Stop animation instantly
+            bgMusic.pause();
+            failSound.play().catch(()=>{});
+            finalScoreText.innerText = Math.floor(score / 10);
+            gameOverScreen.style.display = "flex";
+        }
+
+        // Controls
+        document.getElementById('gameArea').addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            jump(); 
+        }, {passive: false});
+
+        document.body.onkeyup = (e) => { if (e.keyCode == 32) jump(); };
+        document.getElementById('gameArea').addEventListener('click', jump);
+
+    </script>
+</body>
+</html>
